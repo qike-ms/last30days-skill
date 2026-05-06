@@ -79,6 +79,8 @@ MOCK_AVAILABLE_SOURCES = [
     "xiaohongshu",
     "github",
     "perplexity",
+    "threads",
+    "pinterest",
     "xquik",
     "digg",
 ]
