@@ -51,7 +51,7 @@ On first run, the skill will guide you through setup:
 
 2. **Optional: ScrapeCreators**
    - Adds TikTok, Instagram, Reddit backup
-   - 10,000 free API calls
+   - 100 free credits (no expiration)
    - Sign up at scrapecreators.com
 
 3. **Optional: API Keys**

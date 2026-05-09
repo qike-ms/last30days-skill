@@ -256,7 +256,7 @@ These platforms don't have relationships with each other. X doesn't know what Re
 | X / Twitter | Log into x.com in any browser | Free |
 | YouTube | `brew install yt-dlp` | Free |
 | Bluesky | App password from bsky.app | Free |
-| TikTok + Instagram + Threads + Pinterest + YouTube comments | ScrapeCreators key | 10,000 free calls |
+| TikTok + Instagram + Threads + Pinterest + YouTube comments | ScrapeCreators key | 100 free credits, then PAYG |
 | Perplexity Sonar | OpenRouter key | Pay as you go |
 | Web search | Brave Search key | 2,000 free queries/month |
 
