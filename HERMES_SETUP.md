@@ -10,28 +10,20 @@ This guide covers installing last30days on Hermes AI Agent.
 
 ## Installation
 
-### Option 1: Via sync.sh (Recommended)
-
 ```bash
-# Clone the repo
-git clone https://github.com/mvanhorn/last30days-skill.git
-cd last30days-skill
-
-# Run the sync script
-bash skills/last30days/scripts/sync.sh
+hermes skills install mvanhorn/last30days-skill --force
 ```
 
-This will auto-detect Hermes and deploy to `~/.hermes/skills/research/last30days/`
+This pulls the latest release from GitHub and deploys to `~/.hermes/skills/research/last30days/`. `--force` reinstalls over any existing copy.
 
-### Option 2: Manual Copy
+### Developer / live-edit alternative
+
+If you're hacking on the skill locally and want edits to propagate to Hermes without re-installing, symlink your working tree:
 
 ```bash
-# Create directory
-mkdir -p ~/.hermes/skills/research/last30days
-
-# Copy files
-cp skills/last30days/SKILL.md ~/.hermes/skills/research/last30days/
-cp -r skills/last30days/scripts ~/.hermes/skills/research/last30days/
+git clone https://github.com/mvanhorn/last30days-skill.git
+mkdir -p ~/.hermes/skills/research
+ln -s "$(pwd)/last30days-skill/skills/last30days" ~/.hermes/skills/research/last30days
 ```
 
 ## Usage
@@ -106,13 +98,11 @@ python3.12 scripts/last30days.py --diagnose
 
 ## Updating
 
-To update to the latest version:
-
 ```bash
-cd last30days-skill
-git pull
-bash skills/last30days/scripts/sync.sh
+hermes skills install mvanhorn/last30days-skill --force
 ```
+
+If you symlinked your working tree (developer alternative above), just `git pull` in the repo — edits propagate live, no re-install step.
 
 ## Support
 

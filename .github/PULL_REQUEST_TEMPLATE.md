@@ -13,7 +13,6 @@
 <!-- How did you verify this works? -->
 
 - [ ] Ran `uv run python -m pytest -q --tb=short`
-- [ ] Ran `bash scripts/sync.sh` (if scripts/ changed)
 
 ## Related Issues
 

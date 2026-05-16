@@ -17,7 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
-- **BREAKING for Codex native-plugin users:** `.codex-plugin/plugin.json` and the matching SKILL_ROOT resolver branch in SKILL.md Step 1. Codex users should install via `npx skills add mvanhorn/last30days-skill` or copy the skill to `~/.codex/skills/last30days/` (which `sync.sh` already writes to in this repo).
+- **BREAKING for Codex native-plugin users:** `.codex-plugin/plugin.json` and the matching SKILL_ROOT resolver branch in SKILL.md Step 1. Codex users should install via `npx skills add mvanhorn/last30days-skill` or copy the skill to `~/.codex/skills/last30days/`.
+- **`skills/last30days/scripts/sync.sh`.** The maintainer dev-deploy script is gone. Every job it did has a better replacement: `npx skills add . -g -y` symlinks the working tree into every detected harness's skill dir (better than sync.sh's copy model — edits propagate live), `hermes skills install mvanhorn/last30days-skill --force` handles Hermes, `clawhub install last30days-official` handles OpenClaw, and the Claude marketplace cache target was a "test against the official install path" hack we shouldn't have been recommending in the first place. The `test_sync_cache_path_uses_skill_version` test was dropped along with it. CLAUDE.md, HERMES_SETUP.md, the PR template, and a render.py docstring were updated to drop references; CHANGELOG and historical docs (release notes, plan files) keep their existing mentions as accurate history.
 
 ## [3.2.0] - 2026-05-09
 

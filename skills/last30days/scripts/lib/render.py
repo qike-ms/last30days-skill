@@ -21,9 +21,11 @@ _VERSION_RE = re.compile(
 def _skill_version() -> str:
     """Read plugin version from .claude-plugin/plugin.json, falling back to SKILL.md frontmatter.
 
-    sync.sh does not copy .claude-plugin/ to non-cache install dirs (~/.codex/skills,
-    ~/.agents/skills, Hermes), so SKILL.md frontmatter is the fallback that keeps the
-    badge from emitting v? on those installs. Returns "?" only if both sources are missing.
+    Per-harness skill install dirs (`~/.claude/skills`, `~/.codex/skills`, `~/.agents/skills`,
+    Hermes, etc.) do not always carry `.claude-plugin/plugin.json` — that file ships with
+    plugin-cache installs but not with per-harness skill installs. SKILL.md frontmatter is
+    the fallback that keeps the badge from emitting v? on those installs. Returns "?" only
+    if both sources are missing.
 
     A corrupt manifest at one ancestor does not shadow a valid manifest at a deeper one
     (continue, not break). YAML frontmatter accepts double-quoted, single-quoted, or
