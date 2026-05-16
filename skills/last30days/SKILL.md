@@ -68,11 +68,20 @@ Before reading anything else in this file, check whether you loaded SKILL.md fro
 
 ```bash
 CLAUDE_CACHE_LATEST=$(find "$HOME/.claude/plugins/cache/last30days-skill/last30days" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort -V | tail -1)
-CLAUDE_CACHE_LATEST="${CLAUDE_CACHE_LATEST%/}"
-echo "CLAUDE_CACHE_LATEST=$CLAUDE_CACHE_LATEST"
+# Two cache layouts ship in the wild — nested ({version}/skills/last30days/SKILL.md)
+# and flat ({version}/SKILL.md). Resolve to whichever shape actually exists.
+CLAUDE_CACHE_SKILL_MD=""
+if [ -n "$CLAUDE_CACHE_LATEST" ]; then
+  if [ -f "$CLAUDE_CACHE_LATEST/skills/last30days/SKILL.md" ]; then
+    CLAUDE_CACHE_SKILL_MD="$CLAUDE_CACHE_LATEST/skills/last30days/SKILL.md"
+  elif [ -f "$CLAUDE_CACHE_LATEST/SKILL.md" ]; then
+    CLAUDE_CACHE_SKILL_MD="$CLAUDE_CACHE_LATEST/SKILL.md"
+  fi
+fi
+echo "CLAUDE_CACHE_SKILL_MD=$CLAUDE_CACHE_SKILL_MD"
 ```
 
-If the SKILL.md path you just Read contains `/.claude/plugins/marketplaces/` AND `$CLAUDE_CACHE_LATEST` is non-empty, STOP and re-read `$CLAUDE_CACHE_LATEST/skills/last30days/SKILL.md` before proceeding. Otherwise the SKILL.md you have is fine — continue.
+If the SKILL.md path you just Read contains `/.claude/plugins/marketplaces/` AND `$CLAUDE_CACHE_SKILL_MD` is non-empty, STOP and re-read `$CLAUDE_CACHE_SKILL_MD` before proceeding. Otherwise the SKILL.md you have is fine — continue.
 
 **Why this specific check:** `~/.claude/plugins/marketplaces/last30days-skill/` is a git clone Claude Code auto-restores to `origin/main` on session start. It can lag the versioned cache by one or more releases. Three 2026-04-22 test runs (Linear, Coinbase) loaded SKILL.md from `marketplaces/`, ran `--help` from the same stale path, did not see the `--competitors` flag that existed in the cache, and fell back to a manual comparison plan. Result: 2 of 3 windows never invoked the feature they were asked to test. STEP 0 defends against that one Claude Code-specific bug.
 

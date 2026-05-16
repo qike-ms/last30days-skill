@@ -34,11 +34,13 @@ def _skill_version() -> str:
         manifest = parent / ".claude-plugin" / "plugin.json"
         if manifest.is_file():
             try:
-                return json.loads(manifest.read_text()).get("version", "?")
+                version = json.loads(manifest.read_text()).get("version")
             except (json.JSONDecodeError, OSError):
                 continue
+            if version:
+                return version
 
-    # No manifest found at any ancestor — fall back to SKILL.md frontmatter.
+    # No usable manifest found at any ancestor — fall back to SKILL.md frontmatter.
     for parent in here.parents:
         skill_md = parent / "SKILL.md"
         if skill_md.is_file():

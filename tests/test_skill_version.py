@@ -66,6 +66,30 @@ class SkillVersionFallbackTests(unittest.TestCase):
         with patch.object(render, "__file__", str(fake_render)):
             self.assertEqual("8.8.8", render._skill_version())
 
+    def test_manifest_missing_version_key_falls_back_to_skill_md_frontmatter(self):
+        # Valid JSON, but no "version" key. Old behavior returned "?" and never tried
+        # SKILL.md. Fix from greptile review: fall through to SKILL.md fallback.
+        skill_dir = self.tmp_path / "skill_root"
+        fake_render = self._make_render_at(skill_dir)
+        (skill_dir / ".claude-plugin").mkdir()
+        (skill_dir / ".claude-plugin" / "plugin.json").write_text('{"name": "x"}')
+        self._write_skill_md(skill_dir, 'version: "4.4.4"')
+
+        with patch.object(render, "__file__", str(fake_render)):
+            self.assertEqual("4.4.4", render._skill_version())
+
+    def test_manifest_empty_version_string_falls_back_to_skill_md_frontmatter(self):
+        # Manifest version present but empty — treat as missing so the badge
+        # doesn't emit a useless "🌐 last30days v · synced ..." line.
+        skill_dir = self.tmp_path / "skill_root"
+        fake_render = self._make_render_at(skill_dir)
+        (skill_dir / ".claude-plugin").mkdir()
+        (skill_dir / ".claude-plugin" / "plugin.json").write_text('{"version": ""}')
+        self._write_skill_md(skill_dir, 'version: "2.2.2"')
+
+        with patch.object(render, "__file__", str(fake_render)):
+            self.assertEqual("2.2.2", render._skill_version())
+
     def test_corrupt_inner_manifest_does_not_shadow_valid_outer_manifest(self):
         outer = self.tmp_path / "outer"
         inner = outer / "skill_root"
