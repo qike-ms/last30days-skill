@@ -515,3 +515,65 @@ class TestInstagramSilentFailure:
         )
         assert "instagram" in q["bonus_errored"]
 
+    def test_include_sources_without_instagram_suppresses_silent_failure(self):
+        """User set INCLUDE_SOURCES to an opt-in allowlist that omits
+        instagram — the pipeline skips the source by allowlist filter, so
+        the zero-count instagram_items_count is intentional, not a silent
+        failure. Symmetric to the EXCLUDE_SOURCES=instagram guard.
+        """
+        q = _compute(
+            config_overrides={
+                "AUTH_TOKEN": "tok123",
+                "SCRAPECREATORS_API_KEY": "sc_key",
+                "INCLUDE_SOURCES": "reddit,hn,x,youtube",
+            },
+            ytdlp_installed=True,
+            result_overrides={"instagram_items_count": 0},
+        )
+        assert "instagram" not in q["bonus_errored"]
+        assert q["nudge_text"] is None
+
+    def test_include_sources_multi_value_without_instagram(self):
+        """Canonical parsing pattern is comma-separated; case-insensitive."""
+        q = _compute(
+            config_overrides={
+                "AUTH_TOKEN": "tok123",
+                "SCRAPECREATORS_API_KEY": "sc_key",
+                "INCLUDE_SOURCES": " Reddit, HN , YouTube ",
+            },
+            ytdlp_installed=True,
+            result_overrides={"instagram_items_count": 0},
+        )
+        assert "instagram" not in q["bonus_errored"]
+
+    def test_include_sources_with_instagram_still_flags(self):
+        """INCLUDE_SOURCES that explicitly names instagram must not suppress
+        the silent-failure nudge — the source was opted in, so a zero count
+        is a real silent failure.
+        """
+        q = _compute(
+            config_overrides={
+                "AUTH_TOKEN": "tok123",
+                "SCRAPECREATORS_API_KEY": "sc_key",
+                "INCLUDE_SOURCES": "reddit,instagram",
+            },
+            ytdlp_installed=True,
+            result_overrides={"instagram_items_count": 0},
+        )
+        assert "instagram" in q["bonus_errored"]
+
+    def test_include_sources_empty_does_not_suppress(self):
+        """Empty/unset INCLUDE_SOURCES means no allowlist filter, so the
+        silent-failure gate should still fire when instagram is zero.
+        """
+        q = _compute(
+            config_overrides={
+                "AUTH_TOKEN": "tok123",
+                "SCRAPECREATORS_API_KEY": "sc_key",
+                "INCLUDE_SOURCES": "",
+            },
+            ytdlp_installed=True,
+            result_overrides={"instagram_items_count": 0},
+        )
+        assert "instagram" in q["bonus_errored"]
+

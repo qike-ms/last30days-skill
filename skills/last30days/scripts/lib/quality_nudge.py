@@ -95,7 +95,15 @@ def _is_instagram_silent_failure(config: dict, research_results: dict) -> bool:
         for s in (config.get("EXCLUDE_SOURCES") or "").split(",")
         if s.strip()
     }
-    if "instagram" in excluded:
+    # Symmetric case: INCLUDE_SOURCES is an opt-in allowlist. If it is
+    # non-empty and does not name instagram, the source was intentionally
+    # filtered out, so a zero-item count is expected — not a silent failure.
+    included = {
+        s.strip().lower()
+        for s in (config.get("INCLUDE_SOURCES") or "").split(",")
+        if s.strip()
+    }
+    if "instagram" in excluded or (included and "instagram" not in included):
         return False
     count = research_results.get("instagram_items_count")
     if count is None:
