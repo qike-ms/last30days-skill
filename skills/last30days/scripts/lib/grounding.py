@@ -260,6 +260,7 @@ def _enrich_reddit_items(items: list[dict]) -> list[dict]:
     get Reddit content via web-search URLs.
     """
     from . import reddit_enrich
+    from .reddit_enrich import RedditRateLimitError
 
     for item in items:
         url = item.get("url", "")
@@ -270,7 +271,8 @@ def _enrich_reddit_items(items: list[dict]) -> list[dict]:
             if not thread_data:
                 continue
             parsed = reddit_enrich.parse_thread_data(thread_data)
-            selftext = parsed.get("selftext", "")
+            # selftext lives under parsed["submission"], not at the top level
+            selftext = (parsed.get("submission") or {}).get("selftext", "")
             if selftext:
                 item["snippet"] = selftext[:2000]
             comments = parsed.get("comments", [])
@@ -281,6 +283,10 @@ def _enrich_reddit_items(items: list[dict]) -> list[dict]:
                     for c in top[:5]
                 ]
             item["enriched_via"] = "reddit_json_api"
+        except RedditRateLimitError as exc:
+            # Stop iterating to avoid flooding more 429s
+            sys.stderr.write(f"[Web] Reddit rate-limited, halting enrichment: {exc}\n")
+            break
         except Exception as exc:
             sys.stderr.write(f"[Web] Reddit enrichment failed for {url}: {exc}\n")
     return items

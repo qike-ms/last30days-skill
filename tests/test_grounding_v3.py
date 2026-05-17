@@ -227,5 +227,51 @@ class RedditEnrichmentGateTests(unittest.TestCase):
             enrich_mock.assert_called_once()
 
 
+class RedditEnrichItemsTests(unittest.TestCase):
+    """Direct tests for `_enrich_reddit_items` covering the selftext key path
+    and the RedditRateLimitError early-exit behavior.
+    """
+
+    def test_selftext_under_submission_populates_snippet(self):
+        from lib import reddit_enrich
+
+        item = {
+            "url": "https://www.reddit.com/r/python/comments/abc/title/",
+            "snippet": "original",
+        }
+        parsed = {
+            "submission": {"selftext": "thread body content"},
+            "comments": [],
+        }
+        with patch.object(reddit_enrich, "fetch_thread_data", return_value={"raw": True}), \
+             patch.object(reddit_enrich, "parse_thread_data", return_value=parsed):
+            result = grounding._enrich_reddit_items([item])
+        self.assertEqual("thread body content", result[0]["snippet"])
+        self.assertEqual("reddit_json_api", result[0]["enriched_via"])
+
+    def test_rate_limit_error_halts_iteration(self):
+        from lib import reddit_enrich
+
+        item1 = {"url": "https://www.reddit.com/r/python/comments/aaa/x/"}
+        item2 = {"url": "https://www.reddit.com/r/python/comments/bbb/y/"}
+
+        def fake_fetch(url, *args, **kwargs):
+            raise reddit_enrich.RedditRateLimitError(f"429 for {url}")
+
+        captured_stderr: list[str] = []
+
+        with patch.object(reddit_enrich, "fetch_thread_data", side_effect=fake_fetch) as fetch_mock, \
+             patch("lib.grounding.sys.stderr.write", side_effect=lambda s: captured_stderr.append(s)):
+            grounding._enrich_reddit_items([item1, item2])
+
+        # Only the first item should have triggered a fetch attempt
+        self.assertEqual(1, fetch_mock.call_count)
+        # A stderr message about the rate-limit halt should have been emitted
+        self.assertTrue(
+            any("rate-limited" in msg.lower() or "rate limited" in msg.lower() for msg in captured_stderr),
+            msg=f"Expected a rate-limit stderr message, got: {captured_stderr!r}",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
