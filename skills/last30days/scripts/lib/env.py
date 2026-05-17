@@ -34,6 +34,18 @@ CODEX_AUTH_FILE = Path(os.environ.get("CODEX_AUTH_FILE", str(Path.home() / ".cod
 # Example: `security add-generic-password -a "$USER" -s last30days-XAI_API_KEY -w "xai-..."`.
 KEYCHAIN_SERVICE_PREFIX = "last30days-"
 
+# Single source of truth for which credentials the Keychain loader looks up.
+# The setup-keychain.sh helper mirrors this list and is held in sync via
+# tests/test_env_keychain.py::test_keychain_keys_match_setup_script.
+KEYCHAIN_KEYS = (
+    "OPENAI_API_KEY", "XAI_API_KEY", "GOOGLE_API_KEY", "GEMINI_API_KEY",
+    "GOOGLE_GENAI_API_KEY", "SCRAPECREATORS_API_KEY", "APIFY_API_TOKEN",
+    "AUTH_TOKEN", "CT0", "BSKY_HANDLE", "BSKY_APP_PASSWORD",
+    "TRUTHSOCIAL_TOKEN", "BRAVE_API_KEY", "EXA_API_KEY", "SERPER_API_KEY",
+    "OPENROUTER_API_KEY", "PARALLEL_API_KEY", "XQUIK_API_KEY",
+    "XIAOHONGSHU_API_BASE",
+)
+
 AuthSource = Literal["api_key", "codex", "none"]
 AuthStatus = Literal["ok", "missing", "expired", "missing_account_id"]
 
@@ -114,7 +126,11 @@ def _load_keychain(keys: list[str]) -> dict[str, str]:
         return {}
 
     import subprocess
-    user = os.environ.get("USER", "")
+    import pwd
+    # USER can be unset under sudo, in Docker without --env USER, or in some CI
+    # runners; fall back to the OS user record so lookups still match items
+    # stored by setup-keychain.sh (which uses $USER).
+    user = os.environ.get("USER") or pwd.getpwuid(os.getuid()).pw_name
     env: dict[str, str] = {}
     for key in keys:
         try:
@@ -269,14 +285,7 @@ def get_config() -> dict[str, Any]:
 
     # Keychain is the lowest-priority source (Darwin only; no-op elsewhere).
     # Loaded before openai_auth so OPENAI_API_KEY can come from Keychain too.
-    keychain_env = _load_keychain([
-        'OPENAI_API_KEY', 'XAI_API_KEY', 'GOOGLE_API_KEY', 'GEMINI_API_KEY',
-        'GOOGLE_GENAI_API_KEY', 'SCRAPECREATORS_API_KEY', 'APIFY_API_TOKEN',
-        'AUTH_TOKEN', 'CT0', 'BSKY_HANDLE', 'BSKY_APP_PASSWORD',
-        'TRUTHSOCIAL_TOKEN', 'BRAVE_API_KEY', 'EXA_API_KEY', 'SERPER_API_KEY',
-        'OPENROUTER_API_KEY', 'PARALLEL_API_KEY', 'XQUIK_API_KEY',
-        'XIAOHONGSHU_API_BASE',
-    ])
+    keychain_env = _load_keychain(list(KEYCHAIN_KEYS))
     merged_env = {**keychain_env, **merged_env}
 
     openai_auth = get_openai_auth(merged_env)

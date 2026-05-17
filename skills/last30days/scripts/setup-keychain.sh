@@ -17,11 +17,14 @@
 set -euo pipefail
 
 PREFIX="last30days-"
+# Mirrors lib/env.py::KEYCHAIN_KEYS — kept in sync via
+# tests/test_env_keychain.py::test_keychain_keys_match_setup_script.
 ALL_KEYS=(
   OPENAI_API_KEY
   XAI_API_KEY
   GOOGLE_API_KEY
   GEMINI_API_KEY
+  GOOGLE_GENAI_API_KEY
   SCRAPECREATORS_API_KEY
   APIFY_API_TOKEN
   AUTH_TOKEN
@@ -35,6 +38,7 @@ ALL_KEYS=(
   OPENROUTER_API_KEY
   PARALLEL_API_KEY
   XQUIK_API_KEY
+  XIAOHONGSHU_API_BASE
 )
 
 if [[ "${OSTYPE:-}" != darwin* ]]; then

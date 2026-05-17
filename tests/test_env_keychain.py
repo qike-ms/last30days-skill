@@ -10,6 +10,7 @@ Covers:
 
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -20,6 +21,8 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "skills" / "last30days" / "scripts"))
 
 from lib import env  # noqa: E402
+
+SETUP_KEYCHAIN_SH = Path(__file__).resolve().parents[1] / "skills" / "last30days" / "scripts" / "setup-keychain.sh"
 
 
 # ---------------------------------------------------------------------------
@@ -150,3 +153,30 @@ def test_get_config_openai_key_can_come_from_keychain(clean_env):
         cfg = env.get_config()
     assert cfg["OPENAI_API_KEY"] == "sk-from-kc"
     assert cfg["OPENAI_AUTH_SOURCE"] == "api_key"
+
+
+# ---------------------------------------------------------------------------
+# Drift guard: lib/env.py KEYCHAIN_KEYS and setup-keychain.sh ALL_KEYS must
+# stay in lockstep. A mismatch means users storing a key via the helper script
+# wouldn't see it picked up by the loader, or vice versa.
+# ---------------------------------------------------------------------------
+
+
+def _parse_all_keys_from_shell(script: Path) -> list[str]:
+    text = script.read_text(encoding="utf-8")
+    match = re.search(r"ALL_KEYS=\(\s*(.*?)\s*\)", text, re.DOTALL)
+    if not match:
+        raise AssertionError(f"ALL_KEYS=( ... ) array not found in {script}")
+    body = match.group(1)
+    # Strip shell comments and split on whitespace
+    body = re.sub(r"#[^\n]*", "", body)
+    return [tok for tok in body.split() if tok]
+
+
+def test_keychain_keys_match_setup_script():
+    shell_keys = _parse_all_keys_from_shell(SETUP_KEYCHAIN_SH)
+    python_keys = list(env.KEYCHAIN_KEYS)
+    assert shell_keys == python_keys, (
+        "lib/env.py::KEYCHAIN_KEYS and scripts/setup-keychain.sh::ALL_KEYS "
+        f"have drifted.\n  python: {python_keys}\n  shell:  {shell_keys}"
+    )
