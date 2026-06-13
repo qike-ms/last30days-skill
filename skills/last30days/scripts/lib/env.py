@@ -254,9 +254,15 @@ def get_openai_auth(file_env: dict[str, str]) -> OpenAIAuth:
 def _find_project_env() -> Path | None:
     """Find per-project .env by walking up from cwd.
 
+    Disabled by default: project checkouts are not a safe trust boundary for
+    credential-related configuration. Set LAST30DAYS_ENABLE_PROJECT_ENV=1 to
+    opt in for trusted repos.
+
     Searches for .claude/last30days.env in each parent directory,
     stopping at the user's home directory or filesystem root.
     """
+    if os.environ.get("LAST30DAYS_ENABLE_PROJECT_ENV", "").lower() not in ("1", "true", "yes", "on"):
+        return None
     cwd = Path.cwd()
     for parent in [cwd, *cwd.parents]:
         candidate = parent / '.claude' / 'last30days.env'
@@ -273,7 +279,7 @@ def get_config() -> dict[str, Any]:
 
     Priority (highest wins):
       1. Environment variables (os.environ)
-      2. .claude/last30days.env (per-project config)
+      2. .claude/last30days.env (per-project config, opt-in via LAST30DAYS_ENABLE_PROJECT_ENV=1)
       3. ~/.config/last30days/.env (global config)
       4. macOS Keychain items prefixed ``last30days-`` (Darwin only)
     """
@@ -403,16 +409,15 @@ COOKIE_DOMAINS: dict[str, dict[str, Any]] = {
 def extract_browser_credentials(config: dict[str, Any]) -> dict[str, str]:
     """Extract auth cookies from local browsers.
 
-    Default behavior (FROM_BROWSER unset): tries Firefox and Safari only.
-    These read local files silently with no system dialogs.  Chrome is
-    skipped because ``security find-generic-password`` triggers a macOS
-    Keychain prompt that cannot be reliably suppressed.
+    Default behavior (FROM_BROWSER unset): disabled. Reading browser cookies is
+    credential access and must be an explicit local opt-in.
 
-    Set ``FROM_BROWSER=auto`` to also try Chrome (accepts the dialog),
-    or ``FROM_BROWSER=off`` to disable extraction entirely.
+    Set ``FROM_BROWSER=firefox`` or ``FROM_BROWSER=safari`` for one silent
+    browser, or ``FROM_BROWSER=auto`` to also try Chrome (accepts the Keychain
+    dialog on macOS). ``FROM_BROWSER=off`` disables extraction explicitly.
     """
     from_browser = (config.get("FROM_BROWSER") or "").strip().lower()
-    if from_browser == "off":
+    if not from_browser or from_browser == "off":
         return {}
     try:
         from . import cookie_extract
@@ -424,8 +429,7 @@ def extract_browser_credentials(config: dict[str, Any]) -> dict[str, str]:
     elif from_browser == "auto":
         browsers = ["firefox", "safari", "chrome"]
     else:
-        # Default: silent browsers only (no Keychain dialog)
-        browsers = ["firefox", "safari"]
+        return {}
     extracted: dict[str, str] = {}
     for _service, spec in COOKIE_DOMAINS.items():
         if all(config.get(env_key) for env_key in spec["mapping"].values()):

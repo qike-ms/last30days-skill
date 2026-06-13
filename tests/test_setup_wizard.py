@@ -187,7 +187,8 @@ class TestWriteSetupConfig:
             assert env_path.exists()
             content = env_path.read_text()
             assert "SETUP_COMPLETE=true" in content
-            assert "FROM_BROWSER=auto" in content
+            assert "FROM_BROWSER=off" in content
+            assert (env_path.stat().st_mode & 0o777) == 0o600
 
     def test_appends_to_existing_file(self):
         """Appends to existing .env without overwriting keys."""
@@ -204,7 +205,7 @@ class TestWriteSetupConfig:
             assert "AUTH_TOKEN=tok123" in content
             # New keys appended
             assert "SETUP_COMPLETE=true" in content
-            assert "FROM_BROWSER=auto" in content
+            assert "FROM_BROWSER=off" in content
 
     def test_does_not_overwrite_existing_keys(self):
         """If SETUP_COMPLETE or FROM_BROWSER already exist, don't duplicate."""

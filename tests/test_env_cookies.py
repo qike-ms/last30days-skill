@@ -55,17 +55,13 @@ class TestExtractBrowserCredentials:
         mock_extract.assert_not_called()
 
     @patch("lib.cookie_extract.extract_cookies")
-    def test_no_from_browser_defaults_to_silent(self, mock_extract):
-        """Default (no FROM_BROWSER): tries Firefox and Safari only, skips Chrome."""
+    def test_no_from_browser_defaults_to_off(self, mock_extract):
+        """Default (no FROM_BROWSER): does not read browser cookies."""
         mock_extract.return_value = None
         config = _base_config()
         result = extract_browser_credentials(config)
         assert result == {}
-        # Should try firefox and safari but NOT chrome
-        browser_args = [call[0][0] for call in mock_extract.call_args_list]
-        assert "firefox" in browser_args
-        assert "safari" in browser_args
-        assert "chrome" not in browser_args
+        mock_extract.assert_not_called()
 
     @patch("lib.cookie_extract.extract_cookies")
     def test_from_browser_firefox_only(self, mock_extract):

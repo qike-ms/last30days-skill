@@ -1445,12 +1445,12 @@ Headlines should be specific and newsy ("BULLY dropped and it's dominating", "Eu
 
 If the research output contains a `**🔍 Research Coverage:**` block, render it verbatim right before the stats block. This tells the user which core sources are missing and how to unlock them. Do NOT render this block if it is absent from the output (100% coverage = no nudge).
 
-**Just-in-time X unlock:** If X returned 0 results because no X auth is configured (no AUTH_TOKEN/CT0, no XAI_API_KEY, no FROM_BROWSER), offer to set it up right there:
+**Just-in-time X unlock:** If X returned 0 results because no X auth is configured (no AUTH_TOKEN/CT0, no XAI_API_KEY, no FROM_BROWSER), offer to set it up right there. Browser-cookie extraction is credential access and must be explicit opt-in:
 
 **Call AskUserQuestion:**
 Question: "X/Twitter wasn't searched. Want to unlock it?"
 Options:
-- "Scan my browser cookies (free)" - Get consent, run cookie scan, write BROWSER_CONSENT=true + FROM_BROWSER=auto to .env
+- "Scan my browser cookies (free)" - Get explicit consent, then write FROM_BROWSER=firefox, FROM_BROWSER=safari, or FROM_BROWSER=auto to a chmod 600 .env
 - "I have an xAI API key" - Ask them to paste it, write XAI_API_KEY to .env
 - "Skip for now"
 

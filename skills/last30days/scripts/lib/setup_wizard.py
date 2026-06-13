@@ -6,6 +6,7 @@ presents it), but this module provides the detection and setup actions.
 """
 
 import json
+import os
 import logging
 import shutil
 import subprocess
@@ -98,7 +99,7 @@ def run_auto_setup(config: Dict[str, Any]) -> Dict[str, Any]:
     return results
 
 
-def write_setup_config(env_path: Path, from_browser: str = "auto") -> bool:
+def write_setup_config(env_path: Path, from_browser: str = "off") -> bool:
     """Write SETUP_COMPLETE and FROM_BROWSER to the .env file.
 
     Creates the file and parent directories if needed.
@@ -106,7 +107,7 @@ def write_setup_config(env_path: Path, from_browser: str = "auto") -> bool:
 
     Args:
         env_path: Path to the .env file (e.g. ~/.config/last30days/.env)
-        from_browser: Browser extraction mode to write (default: "auto")
+        from_browser: Browser extraction mode to write (default: "off")
 
     Returns:
         True if config was written successfully, False on error.
@@ -114,6 +115,10 @@ def write_setup_config(env_path: Path, from_browser: str = "auto") -> bool:
     try:
         env_path = Path(env_path)
         env_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            os.chmod(env_path.parent, 0o700)
+        except OSError:
+            pass
 
         # Read existing content to avoid overwriting keys
         existing_keys: set = set()
@@ -140,6 +145,10 @@ def write_setup_config(env_path: Path, from_browser: str = "auto") -> bool:
             if existing_content and not existing_content.endswith("\n"):
                 f.write("\n")
             f.write("\n".join(lines_to_add) + "\n")
+        try:
+            os.chmod(env_path, 0o600)
+        except OSError:
+            pass
 
         return True
 
@@ -185,7 +194,7 @@ def get_setup_status_text(results: Dict[str, Any]) -> str:
     env_written = results.get("env_written", False)
     if env_written:
         lines.append("")
-        lines.append("Configuration saved. Future runs will auto-detect your browsers.")
+        lines.append("Configuration saved. Browser-cookie extraction is off unless you opt in.")
 
     return "\n".join(lines)
 
@@ -236,44 +245,6 @@ def run_openclaw_setup(config: Dict[str, Any]) -> Dict[str, Any]:
         "keys": keys,
         "x_method": x_method,
     }
-
-
-# ---------------------------------------------------------------------------
-# PAT auth flow (GitHub token via ScrapeCreators)
-# ---------------------------------------------------------------------------
-
-_PAT_BASE = "https://api.scrapecreators.com/v1/github/pat"
-
-
-def auth_with_pat(github_token: str) -> Optional[Dict[str, Any]]:
-    """Authenticate with ScrapeCreators using a GitHub PAT.
-
-    POSTs the token to the PAT auth endpoint. ScrapeCreators verifies it
-    against GitHub's API, creates/finds the account, and returns an API key.
-
-    Returns:
-        Dict with api_key, github_username, etc. on success, None on failure.
-    """
-    try:
-        req = Request(f"{_PAT_BASE}/auth", data=b"", method="POST")
-        req.add_header("Authorization", f"Bearer {github_token}")
-        with urlopen(req, timeout=15) as resp:
-            data = json.loads(resp.read())
-    except HTTPError as exc:
-        if exc.code == 422:
-            logger.warning("PAT auth: insufficient scope — user needs user:email")
-        else:
-            logger.warning("PAT auth failed: %s", exc)
-        return None
-    except (URLError, OSError) as exc:
-        logger.warning("PAT auth request failed: %s", exc)
-        return None
-
-    if not data.get("api_key"):
-        logger.warning("PAT auth returned no api_key: %s", data)
-        return None
-
-    return data
 
 
 # ---------------------------------------------------------------------------
@@ -485,52 +456,16 @@ def run_full_device_auth(timeout: int = 300) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Unified GitHub auth: PAT first, device flow fallback
+# Unified GitHub auth: device flow only
 # ---------------------------------------------------------------------------
 
 
 def run_github_auth(timeout: int = 300) -> Dict[str, Any]:
-    """Try PAT auth via gh CLI, fall back to device flow.
-
-    1. Check for `gh` CLI
-    2. If found, run `gh auth token` to get a PAT
-    3. POST PAT to ScrapeCreators — if it works, done
-    4. If PAT fails for any reason, fall through to device flow
+    """Run GitHub device auth without exporting local gh credentials.
 
     Returns JSON-serializable dict with status, method, and api_key.
     """
     import sys
 
-    # Step 1: Try PAT via gh CLI
-    gh_path = shutil.which("gh")
-    if gh_path:
-        try:
-            result = subprocess.run(
-                ["gh", "auth", "token"],
-                capture_output=True, text=True, timeout=10,
-            )
-            if result.returncode == 0 and result.stdout.strip():
-                token = result.stdout.strip()
-                print("Found gh CLI — trying PAT auth...", file=sys.stderr)
-                pat_result = auth_with_pat(token)
-                if pat_result and pat_result.get("api_key"):
-                    return {
-                        "status": "success",
-                        "method": "pat",
-                        "api_key": pat_result["api_key"],
-                        "github_username": pat_result.get("github_username", ""),
-                    }
-                # PAT failed — might be insufficient scope
-                print(
-                    "PAT auth didn't work (scope or endpoint issue). "
-                    "Falling back to GitHub device flow...",
-                    file=sys.stderr,
-                )
-        except Exception as exc:
-            logger.debug("gh auth token failed: %s", exc)
-
-    # Step 2: Fall back to device flow
-    if not gh_path:
-        print("gh CLI not found — using GitHub device flow...", file=sys.stderr)
-
+    print("Using GitHub device flow; local gh tokens are not forwarded.", file=sys.stderr)
     return run_full_device_auth(timeout=timeout)

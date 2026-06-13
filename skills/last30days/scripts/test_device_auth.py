@@ -109,17 +109,20 @@ def main():
         profile = _get(f"{BASE}/profile", access_token)
     except (HTTPError, URLError) as e:
         print(f"Failed to fetch profile: {e}")
-        print(f"(access_token was: {access_token})")
+        print(f"(access_token prefix: {access_token[:12]}...)")
         sys.exit(1)
 
-    print(f"\nProfile response:\n{json.dumps(profile, indent=2)}\n")
+    redacted_profile = dict(profile)
+    if redacted_profile.get("api_key"):
+        redacted_profile["api_key"] = f"{redacted_profile['api_key'][:8]}..."
+    print(f"\nProfile response:\n{json.dumps(redacted_profile, indent=2)}\n")
 
     api_key = profile.get("api_key")
     if api_key:
         print("=" * 50)
-        print(f"Your ScrapeCreators API key: {api_key}")
+        print(f"Your ScrapeCreators API key: {api_key[:8]}...")
         print("=" * 50)
-        print(f"\nTo use it: echo 'SCRAPECREATORS_API_KEY={api_key}' >> ~/.config/last30days/.env")
+        print("\nStore it in ~/.config/last30days/.env with chmod 600.")
     else:
         print("No api_key in profile response. Full response printed above.")
 

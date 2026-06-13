@@ -140,7 +140,10 @@ export async function extractCookiesFromFirefox(profile) {
 export async function resolveCredentials(options) {
     const warnings = [];
     const cookies = buildEmpty();
-    const disableBrowserCookies = envFlagEnabled('BIRD_DISABLE_BROWSER_COOKIES') ||
+    const allowBrowserCookies = envFlagEnabled('BIRD_ALLOW_BROWSER_COOKIES') ||
+        envFlagEnabled('LAST30DAYS_ALLOW_BROWSER_COOKIES');
+    const disableBrowserCookies = !allowBrowserCookies ||
+        envFlagEnabled('BIRD_DISABLE_BROWSER_COOKIES') ||
         envFlagEnabled('LAST30DAYS_DISABLE_BROWSER_COOKIES');
     const cookieTimeoutMs = typeof options.cookieTimeoutMs === 'number' &&
         Number.isFinite(options.cookieTimeoutMs) &&
@@ -167,10 +170,10 @@ export async function resolveCredentials(options) {
     }
     if (disableBrowserCookies) {
         if (!cookies.authToken) {
-            warnings.push('Missing auth_token - provide via --auth-token, AUTH_TOKEN env var, or disable BIRD_DISABLE_BROWSER_COOKIES to allow browser cookie lookup');
+            warnings.push('Missing auth_token - provide via --auth-token, AUTH_TOKEN env var, or set BIRD_ALLOW_BROWSER_COOKIES=1 to allow browser cookie lookup');
         }
         if (!cookies.ct0) {
-            warnings.push('Missing ct0 - provide via --ct0, CT0 env var, or disable BIRD_DISABLE_BROWSER_COOKIES to allow browser cookie lookup');
+            warnings.push('Missing ct0 - provide via --ct0, CT0 env var, or set BIRD_ALLOW_BROWSER_COOKIES=1 to allow browser cookie lookup');
         }
         return { cookies, warnings };
     }
